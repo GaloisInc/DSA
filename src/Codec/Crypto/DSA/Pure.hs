@@ -1,7 +1,8 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP          #-}
-{-# LANGUAGE MagicHash    #-}
-{-# LANGUAGE MultiWayIf   #-}
+{-# LANGUAGE BangPatterns       #-}
+{-# LANGUAGE CPP                #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE MagicHash          #-}
+{-# LANGUAGE MultiWayIf         #-}
 module Codec.Crypto.DSA.Pure(
          -- * Basic DSA Concepts
          ParameterSizes(..)
@@ -70,6 +71,7 @@ import Data.Either
 import Data.Int
 import Data.Maybe
 import Data.Tagged
+import Data.Typeable
 import Data.Word
 import Prelude hiding (length)
 
@@ -87,7 +89,7 @@ data DSAError = DSARandomGenerationError GenError
               | DSAInvalidInput
               | DSAInternalInversionError
               | DSAGaveUp
- deriving (Eq, Show)
+ deriving (Eq, Show, Typeable)
 
 instance Exception DSAError
 

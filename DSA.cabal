@@ -40,7 +40,7 @@ Library
                    Codec.Crypto.DSA.Pure,
                    Codec.Crypto.DSA.Exceptions
   GHC-Options:     -Wall -fno-warn-orphans
-  extensions:      BangPatterns, CPP, MagicHash, MultiWayIf
+  extensions:      BangPatterns, CPP, DeriveDataTypeable, MagicHash, MultiWayIf
 
 test-suite test-dsa
   type:           exitcode-stdio-1.0
