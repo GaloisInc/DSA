@@ -183,7 +183,7 @@ prop_validateProbPrimes g params (HF _ hash) mseedlen =
     Right (p, q, ev, g') ->
         let (res, _) = validateProbablePrimes g' p q ev
         in if not res
-              then trace ("FAIL p = " ++ show p ++ " q = " ++ show q) False
+              then trace ("FAIL p = " ++ show p ++ " q = " ++ show q ++ " dps = " ++ show (prpeDomainParameterSeed ev) ++ " counter: " ++ show (prpeCounter ev)) False
               else True
  where mseedlen' = fmap (\ x -> (getPositive x * 8) + getN params) mseedlen
 
