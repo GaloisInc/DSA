@@ -346,7 +346,7 @@ kViaRFC6979 g hash privkey msg = loop bigK_2 bigV_2
 -- be used to ensure that the /p/ and /q/ values provided were generated
 -- appropriately.
 data ProbablePrimesEvidence = ProbablePrimesEvidence {
-       prpeDomainParameterSeed :: Integer
+       prpeDomainParameterSeed :: ByteString
      , prpeCounter             :: Integer
      , prpeHash                :: ByteString -> ByteString
      }
@@ -392,14 +392,13 @@ generateProbablePrimes dsaParam gen hash (Just seedlen)
   find_q g'
     | isLeft dpsEth   = Left (DSARandomGenerationError err)
     | isLeft primeEth = Left primeErr
-    | isPrime         = find_p g''' 1 0 q dpsI
+    | isPrime         = find_p g''' 1 0 q domParamSeed
     | otherwise       = find_q g'''
    where
     dpsEth                = genBytes (fromIntegral ((seedlen + 7) `div` 8)) g'
     Left err              = dpsEth
     Right (dpsBS, g'')    = dpsEth
     domParamSeed          = BS.fromStrict dpsBS
-    dpsI                  = bs2int domParamSeed
     mask                  = 2 ^ (bigN - 1)
     bigU                  = bs2int (hash domParamSeed) `mod` mask
     q                     = mask + bigU + 1 - (bigU `mod` 2)
@@ -407,13 +406,15 @@ generateProbablePrimes dsaParam gen hash (Just seedlen)
     Left primeErr         = primeEth
     Right (isPrime, g''') = primeEth
   --
-  find_p g' !off !ctr !q !dps
+  find_p g' !off !ctr !q !dpsBS
     | ctr == fourTimesL = find_q g'
-    | p < twoLm1        = find_p g' off' ctr' q dps
+    | p < twoLm1        = find_p g' off' ctr' q dpsBS
     | isLeft primeEth   = Left primeErr
-    | isPrime           = Right (p, q, ProbablePrimesEvidence dps ctr hash, g'')
-    | otherwise         = find_p g'' off' ctr' q dps
+    | isPrime           = let ev = ProbablePrimesEvidence dpsBS ctr hash
+                          in Right (p, q, ev, g'')
+    | otherwise         = find_p g'' off' ctr' q dpsBS
    where
+    dps                  = bs2int (dpsBS :: ByteString) :: Integer
     !bigW                = computeW hash dps off n b seedlen
     bigX                 = bigW + (2 ^ (bigL - 1))
     c                    = bigX `mod` (2 * q)
@@ -471,11 +472,11 @@ validateProbablePrimes g p q (ProbablePrimesEvidence dps counter hash) =
   -- 4. If (counter > (4L – 1)), then return INVALID.
   --    [See the second line above]
   -- 5. seedlen = len (domain_parameter_seed).
-  seedlen = intlen dps * 8
+  seedlen = fromIntegral (BS.length dps * 8)
   -- 6. If (seedlen < N), then return INVALID.
   --    [See the third line above]
   -- 7. U = Hash(domain_parameter_seed) mod 2N–1
-  bigU = bs2int (hash (int2bs dps)) `mod` (2 ^ (bigN - 1))
+  bigU = bs2int (hash dps) `mod` (2 ^ (bigN - 1))
   -- 8. computed_q = 2^(N–1) + U + 1 – ( U mod 2).
   computed_q = (2 ^ (bigN - 1)) + bigU + 1 - (bigU `mod` 2)
   -- 9. Test whether or not computed_q is prime as specified in Appendix C.3.
@@ -500,7 +501,7 @@ validateProbablePrimes g p q (ProbablePrimesEvidence dps counter hash) =
     | isPrime                       = step14 gen i computed_p isPrime
     | otherwise                     = loop gen' (i + 1) off'
    where
-    bigW                  = computeW hash dps off n b seedlen
+    bigW                  = computeW hash (bs2int dps) off n b seedlen
     bigX                  = bigW + (2 ^ (bigL - 1))
     c                     = bigX `mod` (2 * q)
     computed_p            = bigX - (c - 1)
@@ -677,7 +678,7 @@ class GenerationEvidence a where
 
 instance GenerationEvidence ProbablePrimesEvidence where
   getHash                = prpeHash
-  getDomainParameterSeed = int2bs . prpeDomainParameterSeed
+  getDomainParameterSeed = prpeDomainParameterSeed
 
 instance GenerationEvidence ProvablePrimesEvidence where
   getHash                  = pvpeHash
